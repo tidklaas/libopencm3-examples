@@ -80,6 +80,7 @@ static uint8_t uart_getc(void)
 
 int main(void)
 {
+
     uint16_t uart_div;
 
     SYSCFG_MODE = SYSCFG_MODE_BW_20M | SYSCFG_MODE_BW_EN | SYSCFG_MODE_CLK_160M 
@@ -94,25 +95,24 @@ int main(void)
 
 
     UART_LCR = (UART_LCR_DLAB | UART_LCR_STOP | UART_LCR_DLS_8BIT);
-    delay(1000);
-
+    delay(10);
 
     uart_div = (APB_CLOCK + (UART_BAUD * 8)) / (UART_BAUD * 16);
     UART_DLH = (uart_div >> 8) & 0xff;
-    delay(1000);
+    delay(10);
 
     UART_DLL = uart_div & 0xff;
-    delay(1000);
+    delay(10);
 
     UART_LCR = UART_LCR_DLS_8BIT;
-    delay(1000);
+    delay(10);
 
     UART_FCR = UART_FCR_FIFO_EN;
-    delay(1000);
+    delay(10);
 
     while(1){
         uart_puts("NL6621 running...\n");
-        delay(CPU_CLOCK);
+        delay(CPU_CLOCK / 5);
     }
     
     return 0;
