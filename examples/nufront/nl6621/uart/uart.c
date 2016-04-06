@@ -28,91 +28,28 @@
 #define APB_CLOCK    40000000u
 #define UART_BAUD       19200u
 
-static void delay(uint32_t count)
-{
-
-    while(count--){
-        __asm__ __volatile__("nop");
-    }
-}
-
-static void __attribute__((noinline)) uart_putc(const char data)
-{
-    while((UART_LSR & UART_LSR_THRE) == 0)
-        ;
-
-    UART_THR = data;
-}
-
-static void __attribute__((noinline)) uart_puts(const char *str) 
-{
-    bool cr_sent;
-
-    cr_sent = false;
-    while(*str != '\0'){
-        if(*str == '\n' && cr_sent == false){
-            uart_putc('\r');
-            cr_sent = true;
-            continue;
-        }
-
-        cr_sent = false;
-        if(*str == '\r'){
-            cr_sent = true;
-        }
-
-        uart_putc(*str++);
-    }
-}
-
-static uint8_t uart_getc(void)
-{
-    uint8_t data;
-
-    while((UART_LSR & UART_LSR_DR) == 0)
-        ;
-
-    data = UART_RBR & 0xff;
-
-    return data;
-}
-
-
 int main(void)
 {
+    char rcvd, last;
+    syscfg_clk_init(cpuclk_160, apbclk_40, gpiobw_20);
 
-    uint16_t uart_div;
+    uart_init(19200);
 
-    SYSCFG_MODE = SYSCFG_MODE_BW_20M | SYSCFG_MODE_BW_EN | SYSCFG_MODE_CLK_160M 
-                | SYSCFG_MODE_CLK_EN | SYSCFG_MODE_SIMD_RST;
+    uart_puts("NL6621 running...\n");
 
-    SYSCFG_CLK_CTRL = SYSCFG_CLK_APB_40M | SYSCFG_CLK_WLAN_GATE_EN 
-                    | SYSCFG_CLK_APB1_GATE_EN | SYSCFG_CLK_APB2_GATE_EN;
-
-
-    SYSCFG_MUX &= ~(GPIO_UART_EN | GPIO_I2S_EN);
-    SYSCFG_MUX |= (SYSCFG_MUX_UART | SYSCFG_MUX_JTAG);
-
-
-    UART_LCR = (UART_LCR_DLAB | UART_LCR_STOP | UART_LCR_DLS_8BIT);
-    delay(10);
-
-    uart_div = (APB_CLOCK + (UART_BAUD * 8)) / (UART_BAUD * 16);
-    UART_DLH = (uart_div >> 8) & 0xff;
-    delay(10);
-
-    UART_DLL = uart_div & 0xff;
-    delay(10);
-
-    UART_LCR = UART_LCR_DLS_8BIT;
-    delay(10);
-
-    UART_FCR = UART_FCR_FIFO_EN;
-    delay(10);
-
+    last = '\0';
     while(1){
-        uart_puts("NL6621 running...\n");
-        delay(CPU_CLOCK / 5);
+        rcvd = uart_getc();
+
+        if(rcvd != '\n' || last != '\r'){
+            uart_putc(rcvd);
+        }
+
+        if(rcvd == '\r'){
+            uart_putc('\n');
+        }
+
+        last = rcvd;
     }
     
     return 0;
